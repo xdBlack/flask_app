@@ -1,0 +1,15 @@
+# 虚拟环境
+myvenv/
+venv/
+env/
+
+# python 缓存
+__pycache__/
+*.pyc
+
+# 本地数据库
+instance/*.db
+
+# 其他
+.DS_Store
+^.log
