@@ -3,6 +3,9 @@ myvenv/
 venv/
 env/
 
+#环境变量
+.env
+
 # python 缓存
 __pycache__/
 *.pyc
@@ -13,3 +16,4 @@ instance/*.db
 # 其他
 .DS_Store
 ^.log
+static/videos/*.mp4

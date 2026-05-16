@@ -1,0 +1,361 @@
+<!Doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>AI 小七</title>
+	<link rel="stylesheet" href="/static/css/ai.css">
+	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			position: relative;
+			font-family: system-ui;
+			height: auto;
+			min-height: 100vh;
+			width: 800px;
+			margin: 0 auto;
+			padding-bottom: 150px;
+			display: flex;
+			flex-direction: column;
+			background-color: #e5edf5;
+			/* background-image: url('/static/images/2.jpg');
+    		background-size: cover; */
+		}
+
+		/* body::before {
+			content: '';
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background-image: url('/static/images/2.jpg');
+			background-size: cover;
+			background-position: center;
+			background-repeat: no-repeat;
+			opacity: 0.5;         
+			z-index: -1;         
+		} */
+
+		/* 让 body 内的内容（#chat, textarea 等）正常显示，不会被伪元素遮挡 */
+		/* body > * {
+			position: relative;
+			z-index: 1;
+		} */
+
+		#bgVideo {
+			position: fixed;
+			top: 0;
+			left: 0;
+			min-width: 100%;
+			min-height: 100%;
+			z-index: -1;
+			object-fit: contain;
+			opacity: 0.3;
+		}
+
+		#chat {
+			border-radius: 10px;
+			flex: 1;
+			/* overflow-y: auto; */
+			padding: 2rem;
+			/* background: #bcc6da; */
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 2rem;
+		}
+
+		textarea {
+			position: fixed;
+			z-index: 10;
+			bottom: 40px;
+			left: 50%;
+    		transform: translateX(-50%);
+			width: 750px;
+			outline: none;
+			padding: 1.2rem;
+			font-family: inherit;
+			font-size: 18px;
+			border: 1px solid #ccc;
+			border-radius: 24px;
+			resize: none;
+			overflow-y: auto;
+			line-height: 1.5;
+			/* background-color: #fb929e; */
+			background: linear-gradient(to bottom right, #fb929e, #00f2fe);
+			caret-color:#ffdfdf;
+			color: white;
+		}
+
+		textarea::placeholder {
+			color: #ffdfdf;
+			opacity: 0.8;   /* 默认透明度 1，可以微调 */
+		}
+
+		.user {
+			border-radius: 20px;
+			font-size: 17px;
+			padding: 0.7rem 1rem;
+			align-self: flex-end;
+			background-color: #39CCE6;
+			color: #E3F8FF;
+		}
+
+		.ai {
+			border-radius: 18px;
+		}
+
+		.thinking-title {
+			color: #66B2FF;
+		}
+
+		.ai-reasoning {
+			padding-left: 2rem;
+			font-size: 14px;
+			color: #1F47AD;
+			margin-bottom: 2rem;
+		}
+
+		.ai-reply {
+			color: #f46f93;
+		}
+
+		.ai-reply p {
+			line-height: 1.5rem;
+			margin-bottom: 0.6rem;
+		}
+		
+		.ai ol, .ai ul {
+			list-style: none;
+		}
+
+		.ai pre {
+			background-color: rgba(255, 255, 255, 0.3);
+			font-size: 15px;
+			margin: 1rem 0;
+			padding: 1rem;
+			border-radius: 15px;
+			overflow-x: auto;
+		}
+
+		.ai del {
+			text-decoration: none;
+		}
+
+		.ai hr {
+			margin: 1rem 0;
+		}
+
+		.info {
+			width: 750px;
+			height: 50px;
+			position: fixed;
+			z-index: 5;
+			bottom: 0;
+			left: 50%;
+			transform: translateX(-50%);
+			background-color: rgba(225,242,248,0.8);
+			line-height: 50px;
+			text-align: center;
+			font-size: 12px;
+			color: #00bbf0;
+			border-radius: 1rem;
+		}
+	</style>
+</head>
+<body>
+	<video autoplay muted loop playsinline
+			controlslist="nodownload nofullscreen noremoteplayback"
+       		disablepictureinpicture
+       		style="pointer-events: none;"
+	    	id="bgVideo">
+		<source src="/static/videos/17v2.mp4" type="video/mp4">
+	</video>
+	<div id="chat"></div>
+	<textarea id="question" rows="2" placeholder="有什么想问的"></textarea>
+	<div class="info">deepseek-v4-pro</div>
+
+	<script>
+        const chatDiv = document.getElementById('chat');
+        const textarea = document.getElementById('question');
+
+		function autoResize() {
+			const lines = textarea.value.split('\n').length;
+			const newRows = Math.min(Math.max(lines, 2), 6);
+			textarea.rows = newRows;
+		}
+
+		let disableAutoScroll = false;
+		let scrollTimeout = null;
+
+		function isWindowAtBottom() {
+			// 计算当前滚动到底部的距离容差（10px）
+			return window.innerHeight + window.scrollY >= document.body.scrollHeight - 10;
+		}
+
+		window.addEventListener('scroll', () => {
+			if (!isWindowAtBottom()) {
+				disableAutoScroll = true;
+				// 可选：3秒后重新启用自动滚动（避免永久禁用）
+				// if (scrollTimeout) clearTimeout(scrollTimeout);
+				// scrollTimeout = setTimeout(() => {
+				// 	disableAutoScroll = false;
+				// }, 3000);
+			} else {
+				// 用户滚到底部时，重新启用自动滚动
+				disableAutoScroll = false;
+			}
+		});
+
+		function scrollToBottom() {
+			if (!disableAutoScroll) {
+				window.scrollTo({
+					top: document.body.scrollHeight,
+					behavior: 'smooth'
+				});
+			}
+		}
+
+		textarea.addEventListener('input', autoResize);
+
+		textarea.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				if (e.ctrlKey) {
+					// 手动插入换行符
+					const start = textarea.selectionStart;
+					const end = textarea.selectionEnd;
+					textarea.value = textarea.value.substring(0, start) + '\n' + textarea.value.substring(end);
+					textarea.selectionStart = textarea.selectionEnd = start + 1;
+					autoResize();
+					e.preventDefault();
+				} else {
+					e.preventDefault();
+					//ask之前设置页面自动滚动
+					disableAutoScroll = false;
+					ask();
+				}
+    		}
+		});
+
+		function addUserMessage(text) {
+			const div = document.createElement('div')
+			div.className = 'user';
+			div.innerHTML = escapeHtml(text);
+			chatDiv.appendChild(div);
+			scrollToBottom();
+		}
+
+		function addAiMessage(reply, reasoning = null) {
+			const div = document.createElement('div')
+			div.className = 'ai'
+
+			let thinkingHtml = '';
+			if (reasoning && reasoning.trim() && reasoning !== '（本次回答无需复杂推理）') {
+				thinkingHtml = `<div class="ai-reasoning">${escapeHtml(reasoning)}</div>`;
+			}
+
+			const replyHtml = marked.parse(reply);
+			div.innerHTML = `${thinkingHtml}<div class="ai-reply">${replyHtml}</div>`;
+			chatDiv.appendChild(div);
+			scrollToBottom();
+		}
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function ask() {
+			const q = textarea.value.trim();
+			if (!q) return;
+
+			addUserMessage(q);
+			textarea.value = '';
+			autoResize();
+
+			// 创建 AI 消息容器
+			const aiDiv = document.createElement('div');
+			aiDiv.className = 'ai';
+			
+			// 构建初始结构：思考折叠区 + 回答区
+			aiDiv.innerHTML = `
+				<details class="thinking-details" style="margin-bottom: 8px;">
+					<summary class="thinking-title">思考过程</summary>
+					<div class="ai-reasoning"></div>
+				</details>
+				<div class="ai-reply"></div>
+			`;
+			chatDiv.appendChild(aiDiv);
+			scrollToBottom();
+
+			const reasoningDiv = aiDiv.querySelector('.ai-reasoning');
+			const replyDiv = aiDiv.querySelector('.ai-reply');
+			let fullReasoning = "";
+			let fullContent = "";
+
+			const response = await fetch('/ai/api/chat', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ message: q })
+			});
+
+			if (!response.ok) {
+				replyDiv.innerHTML = `<span class="error-text">HTTP 错误：${response.status}</span>`;
+				return;
+			}
+
+			const reader = response.body.getReader();
+			const decoder = new TextDecoder('utf-8');
+			let buffer = "";
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop();
+				for (const line of lines) {
+					if (line.startsWith('data: ')) {
+						const dataStr = line.slice(6);
+						if (dataStr === '[DONE]') continue;
+						try {
+							const data = JSON.parse(dataStr);
+							if (data.type === 'content') {
+								fullContent += data.content;
+								const rendered = marked.parse(fullContent);
+								replyDiv.innerHTML = rendered;
+								scrollToBottom();
+							} else if (data.type === 'reasoning') {
+								fullReasoning += data.content;
+								// 将思考内容作为纯文本显示（或你也可以用 marked 解析）
+								reasoningDiv.innerHTML = escapeHtml(fullReasoning).replace(/\n/g, '<br>');
+								// 如果有思考内容，默认展开 details（可以不加 open 属性）
+								if (fullReasoning.length > 0 && !aiDiv.querySelector('details').hasAttribute('open')) {
+									aiDiv.querySelector('details').setAttribute('open', '');
+								}
+								scrollToBottom();
+							} else if (data.type === 'end') {
+								reader.cancel();
+								return;
+							} else if (data.type === 'error') {
+								replyDiv.innerHTML = `<span class="error-text">错误: ${data.message}</span>`;
+								reader.cancel();
+								return;
+							}
+						} catch (e) {
+							console.warn('解析 SSE 数据失败:', dataStr, e);
+						}
+					}
+				}
+			}
+		}
+    </script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>小猫收集小鱼干</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;   /* 去掉滚动条，让游戏区域全屏 */
+            height: 100vh;       /* 占满整个窗口高度 */
+            background: #f0f0f0;
+        }
+        #小猫 {
+            position: absolute;
+            left: 100px;
+            top: 100px;
+            font-size: 40px;
+            transition: left 0.05s, top 0.05s, transform 0.2s;  
+        }
+
+        #小猫.跳跃中 {
+            transform: scale(1.4);
+        }
+
+        .小鱼干 {
+            position: absolute;
+            font-size: 30px;
+            transition: opacity 0.3s;
+        }
+
+        .小鱼干.消失中 {
+            opacity: 0;
+        }
+
+        #分数面板 {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="分数面板">🐟 小鱼干: 0</div>
+    <div id="小猫">🐱</div>
+
+    <script>
+        /* --- 游戏配置 --- */
+        const CAT_SIZE = 40;          // 小猫大致宽高（px）
+        const FISH_SIZE = 30;         // 小鱼干尺寸
+        const STEP = 3;              // 每次移动像素
+        const COLLISION_DIST = 40;    // 碰撞距离阈值
+
+        /* --- DOM 元素 --- */
+        const cat = document.getElementById('小猫');
+        const panel = document.getElementById('分数面板');
+
+        /* --- 游戏状态 --- */
+        let score = 0;
+        let catLeft = 100;
+        let catTop = 100;
+
+        // 所有鱼干的数据：{ el, x, y }
+        let fishes = [];
+
+        // 生成随机位置，确保完全在可视区域内
+        function randomPosition() {
+            const maxX = window.innerWidth - FISH_SIZE;
+            const maxY = window.innerHeight - FISH_SIZE;
+            return {
+                x: Math.floor(Math.random() * maxX),
+                y: Math.floor(Math.random() * maxY)
+            };
+        }
+
+        // 创建一条鱼干 DOM 并返回
+        function createFishElement(x, y) {
+            const el = document.createElement('div');
+            el.className = '小鱼干';
+            el.textContent = '🐟';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            return el;
+        }
+
+        // 初始化或重新填充鱼干
+        function spawnFishes(count = 5) {
+            // 清除所有现有鱼干（DOM 和数据）
+            fishes.forEach(f => f.el.remove());
+            fishes = [];
+
+            for (let i = 0; i < count; i++) {
+                const pos = randomPosition();
+                const el = createFishElement(pos.x, pos.y);
+                document.body.appendChild(el);
+                fishes.push({ el, x: pos.x, y: pos.y });
+            }
+        }
+
+        // 更新分数显示
+        function updateScore(newScore) {
+            score = newScore;
+            panel.textContent = `🐟 小鱼干: ${score}`;
+        }
+
+        // 碰撞检测（倒序遍历）
+        function checkCollision() {
+            const catCenterX = catLeft + CAT_SIZE / 2;
+            const catCenterY = catTop + CAT_SIZE / 2;
+
+            for (let i = fishes.length - 1; i >= 0; i--) {
+                const fish = fishes[i];
+                const fishCenterX = fish.x + FISH_SIZE / 2;
+                const fishCenterY = fish.y + FISH_SIZE / 2;
+                const dx = catCenterX - fishCenterX;
+                const dy = catCenterY - fishCenterY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < COLLISION_DIST) {
+                    fish.el.classList.add('消失中');
+                    fish.el.addEventListener('transitionend', ()=>{
+                        fish.el.remove();
+                    })
+
+                    // 从数组中删除
+                    fishes.splice(i, 1);
+                    // 增加分数
+                    updateScore(score + 1);
+
+                    cat.classList.add('跳跃中');
+                    setTimeout(() => {
+                        cat.classList.remove('跳跃中');
+                    }, 200);
+                }
+            }
+
+            // 全部吃完再生成一批
+            if (fishes.length === 0) {
+                spawnFishes(5);
+            }
+        }
+
+        // 游戏状态：记录哪些方向键正被按住
+        const 按键状态 = {
+            ArrowRight: false,
+            ArrowLeft: false,
+            ArrowDown: false,
+            ArrowUp: false,
+        };
+
+        // 按下去时设置状态为 true
+        document.addEventListener('keydown', (e) => {
+            if (e.key in 按键状态) {
+                e.preventDefault();   // 阻止方向键滚动页面的默认行为喵
+                按键状态[e.key] = true;
+            }
+        });
+
+        // 松开时取消状态
+        document.addEventListener('keyup', (e) => {
+            if (e.key in 按键状态) {
+                按键状态[e.key] = false;
+            }
+        });
+
+        // 游戏主循环：每一帧根据按键状态移动小猫
+        function 游戏循环() {
+            // 根据状态移动
+            if (按键状态.ArrowRight) catLeft += STEP;
+            if (按键状态.ArrowLeft)  catLeft -= STEP;
+            if (按键状态.ArrowDown)  catTop += STEP;
+            if (按键状态.ArrowUp)    catTop -= STEP;
+
+            const maxX = window.innerWidth - CAT_SIZE;
+            const maxY = window.innerHeight - CAT_SIZE;
+            catLeft = Math.max(0, Math.min(catLeft, maxX));
+            catTop  = Math.max(0, Math.min(catTop, maxY));
+
+            cat.style.left = catLeft + 'px';
+            cat.style.top = catTop + 'px';
+
+            checkCollision();
+
+            // 下一帧继续
+            requestAnimationFrame(游戏循环);
+        }
+
+        // 启动游戏
+        spawnFishes(5);
+        updateScore(0);
+
+        // 启动游戏循环
+        requestAnimationFrame(游戏循环);
+    </script>
+</body>
+</html>

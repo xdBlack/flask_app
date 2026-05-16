@@ -3,22 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="../static/css/style.css">
+    <title>home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #aedefc;
+        }
+
+        .index {
+            width: 350px;
+            height: 50px;
+            display: flex;
+            justify-content: flex-start;
+            font-size: 24px;
+            background-color: #fff6f6;
+            border-radius: 25px;
+        }
+
+        a {
+            text-decoration: none;
+            color: rgb(214, 126, 140);
+            width: 100px;
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+            background-color: #ffdfdf;
+            border-radius: 25px;
+        }
+
+        a:hover {
+            color: pink;
+        }
+
+    </style>
 </head>
 <body>
-    <div class="shell">
-        <h2 class="title">Login</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <input type="submit" value=Login id="loginBtn">
-        <div class="footer">
-            <div class="Remember">
-                <input type="checkbox" id="rememberMe">
-                <label for="rememberMe">记住我</label>
-            </div>
-            <button id="Password">去注册</button>
-        </div>
+    <div class="index">
+        <a href="/ai" id="ai">ai</a>
+        <a href="/game" id="game">game</a>
     </div>
 </body>
 </html>
