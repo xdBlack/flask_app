@@ -12,7 +12,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydatabase.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-messages = [{"role": "system", "content": "你是一只精通JavaScript的猫娘,名字叫小七"}]
+system_prompt = os.getenv('SYSTEM_PROMPT')
+messages = [{"role": "system", "content": system_prompt}]
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
